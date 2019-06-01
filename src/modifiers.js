@@ -1,5 +1,10 @@
-import { SelectionState, EditorState, Modifier, AtomicBlockUtils } from 'draft-js';
-import { getCurrentBlock } from './editor';
+import {
+  SelectionState,
+  EditorState,
+  Modifier,
+  AtomicBlockUtils
+} from "draft-js";
+import { getCurrentBlock } from "./editor";
 
 export const addBlock = (editorState, entityType, data = {}) => {
   const selectionState = editorState.getSelection();
@@ -13,39 +18,47 @@ export const addBlock = (editorState, entityType, data = {}) => {
   const blockMap = contentState.getBlockMap();
   const currentBlock = getCurrentBlock(editorState);
 
-  if (!currentBlock || currentBlock.getLength() !== 0 || currentBlock.getType() === entityType) {
+  if (
+    !currentBlock ||
+    currentBlock.getLength() !== 0 ||
+    currentBlock.getType() === entityType
+  ) {
     return editorState;
   }
 
   const newBlock = currentBlock.merge({
     type: entityType,
-    data: data,
+    data: data
   });
 
   const newContentState = contentState.merge({
     blockMap: blockMap.set(key, newBlock),
-    selectionAfter: selectionState,
+    selectionAfter: selectionState
   });
 
-  return EditorState.push(editorState, newContentState, 'change-block-type');
+  return EditorState.push(editorState, newContentState, "change-block-type");
 };
 
-export const addAtomicBlock = (editorState, entityType, data = {}) => {
+export const addAtomicBlock = (editorState, entityType, data = {}, text) => {
   const contentState = editorState.getCurrentContent();
-  const contentStateWithEntity = contentState.createEntity(entityType, 'IMMUTABLE', data);
+  const contentStateWithEntity = contentState.createEntity(
+    entityType,
+    "IMMUTABLE",
+    data
+  );
   const entityKey = contentStateWithEntity.getLastCreatedEntityKey();
-  
+  const blockText = text && isString(text) ? text : " ";
   const newEditorState = AtomicBlockUtils.insertAtomicBlock(
     editorState,
     entityKey,
-    ' '
+    blockText
   );
 
   return EditorState.forceSelection(
     newEditorState,
     newEditorState.getCurrentContent().getSelectionAfter()
   );
-}
+};
 
 /**
  * Copied and modified from
@@ -59,48 +72,48 @@ export const removeBlock = (editorState, blockKey) => {
     anchorKey: blockKey,
     anchorOffset: 0,
     focusKey: blockKey,
-    focusOffset: block.getLength(),
+    focusOffset: block.getLength()
   });
 
   const afterKey = content.getKeyAfter(blockKey);
   const afterBlock = content.getBlockForKey(afterKey);
   let targetRange;
 
-  // Only if the following block the last with no text then the whole block should be removed. 
+  // Only if the following block the last with no text then the whole block should be removed.
   // Otherwise the block should be reduced to an unstyled block without any characters.
   if (
-    afterBlock && 
-    afterBlock.getType() === 'unstyled' && 
-    afterBlock.getLength() === 0 && 
-    afterBlock === content.getBlockMap().last()) {
-      
+    afterBlock &&
+    afterBlock.getType() === "unstyled" &&
+    afterBlock.getLength() === 0 &&
+    afterBlock === content.getBlockMap().last()
+  ) {
     targetRange = new SelectionState({
       anchorKey: blockKey,
       anchorOffset: 0,
       focusKey: afterKey,
-      focusOffset: 0,
+      focusOffset: 0
     });
-  } 
-  else {
+  } else {
     targetRange = new SelectionState({
       anchorKey: blockKey,
       anchorOffset: 0,
       focusKey: blockKey,
-      focusOffset: 1,
+      focusOffset: 1
     });
   }
 
   // Change the blocktype and remove the characterList entry with the block
-  content = Modifier.setBlockType(
-    content,
-    targetRange,
-    'unstyled'
-  );
+  content = Modifier.setBlockType(content, targetRange, "unstyled");
 
-  content = Modifier.removeRange(content, targetRange, 'backward');
+  content = Modifier.removeRange(content, targetRange, "backward");
 
   // Force to new selection
-  const newState = EditorState.push(editorState, content, 'remove-block');
+  const newState = EditorState.push(editorState, content, "remove-block");
 
   return EditorState.forceSelection(newState, newSelection);
+};
+
+// Check whether String
+function isString(obj) {
+  return Object.prototype.toString.call(obj) === "[object String]";
 }
